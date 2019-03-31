@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{88272D63-3922-4CBE-8502-F33F7C3CCEA7}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>MultiThreadGzip</RootNamespace>
+    <AssemblyName>MultiThreadGzip</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <LangVersion>3</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Components\Chunk.cs" />
+    <Compile Include="Components\CompressionResult.cs" />
+    <Compile Include="Components\CompressionResultBuilder.cs" />
+    <Compile Include="Components\ErrorCode.cs" />
+    <Compile Include="Components\OperationFailedException.cs" />
+    <Compile Include="Components\Progress.cs" />
+    <Compile Include="Components\TaskHandler.cs" />
+    <Compile Include="Components\TaskResult.cs" />
+    <Compile Include="Components\ZipMode.cs" />
+    <Compile Include="Helpers\ChunkExtensions.cs" />
+    <Compile Include="Helpers\Constants.cs" />
+    <Compile Include="Helpers\MemberInfoGetting.cs" />
+    <Compile Include="Helpers\StreamExtensions.cs" />
+    <Compile Include="GzipCompressor.cs" />
+    <Compile Include="Processors\ProcessorQueue.cs" />
+    <Compile Include="Processors\ProcessorQueueSplitter.cs" />
+    <Compile Include="Interfaces\ICompressor.cs" />
+    <Compile Include="Interfaces\IProcessorQueue.cs" />
+    <Compile Include="Interfaces\IProgress.cs" />
+    <Compile Include="Interfaces\ITaskHandler.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+         Other similar extension points exist, see Microsoft.Common.targets.
+    <Target Name="BeforeBuild">
+    </Target>
+    <Target Name="AfterBuild">
+    </Target>
+    -->
+</Project>
