@@ -20,7 +20,7 @@ namespace MultiThreadGzip.Components
 
         public void Reset()
         {
-            CurrentProgress = 0;
+            SetProgress(0);
         }
     }
 }

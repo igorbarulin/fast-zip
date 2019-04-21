@@ -1,215 +1,114 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using MultiThreadGzip.Components;
 using MultiThreadGzip.Helpers;
 using MultiThreadGzip.Interfaces;
-using MultiThreadGzip.Processors;
 
 namespace MultiThreadGzip
 {
     public class GzipCompressor : ICompressor
     {
         private const int BufferSize = 4;
-        private const int ChunkSize = 8192;
-        
+
         public IProgress Progress
         {
             get { return _progress; }
         }
         
         private readonly Progress _progress = new Progress();
+        
+        private CompressionResultBuilder _resultBuilder;
+        
+        private Stopwatch _stopwatch;
+        
 
         public CompressionResult Compress(string originalFileName, string compressedFileName)
         {
-            var builder = new CompressionResultBuilder(ZipMode.Compress);
+            return InternalProcess(originalFileName, compressedFileName, ZipMode.Compress,
+                new CompressionProcessorFactory());
+        }
+
+        public CompressionResult Decompress(string compressedFileName, string decompressedFileName)
+        {
+            return InternalProcess(compressedFileName, decompressedFileName, ZipMode.Decompress,
+                new DecompressionProcessorFactory());
+        }
+        
+        private CompressionResult InternalProcess(string fromFileName, string toFileName, ZipMode zipMode, IGzipProcessorFactory processorFactory)
+        {
+            DropStates();
             
-            _progress.Reset();
-
-            var sw = Stopwatch.StartNew();
-
+            _resultBuilder.SetZipMode(zipMode);
+            
             try
             {
-                if (!File.Exists(originalFileName))
-                {
-                    throw new OperationFailedException(ErrorCode.FileDoesNotExist);
-                }
+                GzipArgumentsValidator.ThrowBadArguments(fromFileName, toFileName);
 
-                if (InvalidFileName(compressedFileName))
+                using (var fromFile = new FileStream(fromFileName, FileMode.Open))
+                using (var toFile = new FileStream(toFileName, FileMode.Create))
                 {
-                    throw new OperationFailedException(ErrorCode.InvalidFileName);
-                }
-
-                using (var originalFile = new FileStream(originalFileName, FileMode.Open))
-                using (var compressedFile = new FileStream(compressedFileName, FileMode.Create))
-                {
-                    builder.SetInputFileInfo(originalFileName, originalFile.Length);
+                    _resultBuilder.SetInputFileInfo(fromFileName, fromFile.Length);
                     
                     Exception internalException = null;
                     Action<Exception> onException = exception => internalException = exception;
-                    
-                    compressedFile.WriteSignature();
-                
-                    using (var writer = CreateChunkWriter(compressedFile, ZipMode.Compress, onException))
-                    using (var compressor = CreateCompressor(writer, Environment.ProcessorCount, ZipMode.Compress, onException))
-                    {
-                        var buffer = new byte[ChunkSize];
 
-                        var position = 0L;
-                        var readCount = originalFile.Read(buffer, 0, ChunkSize);
-                        while (readCount > 0)
+                    SignatureStage(fromFile, toFile, zipMode);
+                    
+                    using (var writer = processorFactory.CreateChunkWriter(toFile, onException, BufferSize))
+                    using (var compressor = processorFactory.CreateCompressor(writer, Environment.ProcessorCount, onException, BufferSize))
+                    {
+                        foreach (var chunk in fromFile.Chunks(zipMode))
                         {
                             if (internalException != null)
                             {
                                 writer.Cancel();
                                 compressor.Cancel();
-                                
+
                                 throw internalException;
                             }
                             
-                            compressor.Enqueue(new Chunk(position, buffer.Take(readCount).ToArray()));
-                            position = originalFile.Position;
-                            readCount = originalFile.Read(buffer, 0, ChunkSize);
-                    
-                            _progress.SetProgress(CalculateProgress(originalFile.Position, originalFile.Length));
-                            builder.SetOutputFileInfo(compressedFileName, compressedFile.Length);
+                            compressor.Enqueue(chunk);
+                            
+                            _progress.SetProgress(fromFile.Position, fromFile.Length);
+                            _resultBuilder.SetOutputFileInfo(toFileName, toFile.Length);
                         }
+                        
+                        _progress.SetProgress(100); //to avoid zero progress when original file is empty
                     }
                 }
             }
             catch (Exception e)
             {
-                builder.SetException(e);
+                _resultBuilder.SetException(e);
             }
             
-            builder.SetLeadTime(sw.Elapsed);
+            _resultBuilder.SetLeadTime(_stopwatch.Elapsed);
             
-            return builder.Result;
+            return _resultBuilder.Result;
         }
-
-        public CompressionResult Decompress(string compressedFileName, string decompressedFileName)
+        
+        private void DropStates()
         {
-            var builder = new CompressionResultBuilder(ZipMode.Decompress);
-            
             _progress.Reset();
-
-            var sw = Stopwatch.StartNew();
-            
-            try
-            {
-                if (!File.Exists(compressedFileName))
-                {
-                    throw new OperationFailedException(ErrorCode.FileDoesNotExist);
-                }
-
-                if (InvalidFileName(decompressedFileName))
-                {
-                    throw new OperationFailedException(ErrorCode.InvalidFileName);
-                }
-                
-                using (var compressedFile = new FileStream(compressedFileName, FileMode.Open))
-                using (var decompressedFile = new FileStream(decompressedFileName, FileMode.Create))
-                {
-                    builder.SetInputFileInfo(compressedFileName, compressedFile.Length);
-                    
-                    Exception internalException = null;
-                    Action<Exception> onException = exception => internalException = exception;
-
-                    var signature = string.Empty;
-                    if (compressedFile.ReadSignature(ref signature) == false || signature != Constants.Signature)
-                    {
-                        throw new OperationFailedException(ErrorCode.NotCompatible);
-                    }
-
-                    using (var writer = CreateChunkWriter(decompressedFile, ZipMode.Decompress, onException))
-                    using (var decompressor = CreateCompressor(writer, Environment.ProcessorCount, ZipMode.Decompress, onException))
-                    {
-                        Chunk chunk;
-                        while (compressedFile.ReadChunk(out chunk))
-                        {
-                            if (internalException != null)
-                            {
-                                writer.Cancel();
-                                decompressor.Cancel();
-                                
-                                throw internalException;
-                            }
-                            
-                            decompressor.Enqueue(chunk);
-                    
-                            _progress.SetProgress(CalculateProgress(compressedFile.Position, compressedFile.Length));
-                            builder.SetOutputFileInfo(decompressedFileName, decompressedFile.Length);
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                builder.SetException(e);
-            }
-
-            builder.SetLeadTime(sw.Elapsed);
-
-            return builder.Result;
-        }
-        
-        private static bool InvalidFileName(string filePath)
-        {
-            if (string.IsNullOrEmpty(filePath))
-            {
-                return true;
-            }
-            
-            var fileName = filePath.Split(Path.DirectorySeparatorChar).LastOrDefault();
-            
-            return filePath.Any(c => Path.GetInvalidPathChars().Contains(c)) ||
-                   string.IsNullOrEmpty(fileName) ||
-                   fileName.Any(c => Path.GetInvalidFileNameChars().Contains(c));
-        }
-        
-        private static int CalculateProgress(long position, long length)
-        {
-            return (int) Math.Ceiling((double) position / length * 100);
+            _resultBuilder = new CompressionResultBuilder();
+            _stopwatch = Stopwatch.StartNew();
         }
 
-        private static IProcessorQueue CreateChunkWriter(Stream stream, ZipMode zipMode, Action<Exception> onException)
+        private static void SignatureStage(Stream fromFile, Stream toFile, ZipMode zipMode)
         {
-            ITaskHandler taskHandler;
             switch (zipMode)
             {
                 case ZipMode.Compress:
-                    taskHandler = new TaskHandler<Chunk>(stream.WriteCompressedChunk);
+                    toFile.WriteSignature();
                     break;
                 case ZipMode.Decompress:
-                    taskHandler = new TaskHandler<Chunk>(stream.WriteDecompressedChunk); 
+                    fromFile.ThrowBadSignature();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(MemberInfoGetting.GetMemberName(() => zipMode),
                         zipMode, "Invalid enum value");
             }
-            
-            return new ProcessorQueue(taskHandler, null, onException, BufferSize);
-        }
-
-        private static IProcessorQueue CreateCompressor(IProcessorQueue writer, int threadCount, ZipMode zipMode, Action<Exception> onException)
-        {
-            ITaskHandler taskHandler;
-            switch (zipMode)
-            {
-                case ZipMode.Compress:
-                    taskHandler = new TaskHandler<Chunk, Chunk>(chunk => chunk.Compress());
-                    break;
-                case ZipMode.Decompress:
-                    taskHandler = new TaskHandler<Chunk, Chunk>(chunk => chunk.Decompress());
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(MemberInfoGetting.GetMemberName(() => zipMode),
-                        zipMode, "Invalid enum value");
-            }
-            
-            return new ProcessorQueueSplitter(Enumerable.Range(1, threadCount).Select(i =>
-                (IProcessorQueue) new ProcessorQueue(taskHandler, writer, onException, BufferSize)).ToArray());
         }
     }
 }

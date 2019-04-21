@@ -4,7 +4,7 @@ using MultiThreadGzip.Components;
 
 namespace MultiThreadGzip.Helpers
 {
-    public static class ChunkExtensions
+    public static class ChunkHelper
     {
         public static Chunk Compress(this Chunk chunk)
         {

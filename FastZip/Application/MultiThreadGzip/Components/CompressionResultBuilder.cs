@@ -16,7 +16,7 @@ namespace MultiThreadGzip.Components
         private Exception _exception;
         private ErrorCode _errorCode;
         
-        private readonly ZipMode _zipMode;
+        private ZipMode _zipMode;
         
         private string _inputFileName;
         private long _inputFileLength;
@@ -27,9 +27,13 @@ namespace MultiThreadGzip.Components
         private TimeSpan _leadTime;
 
 
-        public CompressionResultBuilder(ZipMode zipMode)
+        public CompressionResultBuilder()
         {
             _errorCode = ErrorCode.Success;
+        }
+
+        public void SetZipMode(ZipMode zipMode)
+        {
             _zipMode = zipMode;
         }
 

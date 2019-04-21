@@ -1,6 +1,7 @@
 ﻿using System;
 using MultiThreadGzip;
 using MultiThreadGzip.Components;
+using MultiThreadGzip.Helpers;
 
 namespace ConsoleGzip
 {
@@ -26,14 +27,24 @@ namespace ConsoleGzip
                         result = compressor.Decompress(parameters.InputFileName, parameters.OutputFileName);
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new ArgumentOutOfRangeException(MemberInfoGetting.GetMemberName(() => parameters.ZipMode),
+                            parameters.ZipMode, "Invalid enum value");
                 }
                 
                 PrintResult(result);
+
+                if (result.HaveError)
+                {
+                    Environment.Exit(1);
+                }
+                
+                Environment.Exit(0);
             }
             else
             {
                 PrintHelp();
+                
+                Environment.Exit(1);
             }
         }
 

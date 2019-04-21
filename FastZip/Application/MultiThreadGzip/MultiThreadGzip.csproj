@@ -39,6 +39,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Components\CompressionProcessorFactory.cs" />
+    <Compile Include="Components\DecompressionProcessorFactory.cs" />
+    <Compile Include="Components\GzipArgumentsValidator.cs" />
     <Compile Include="Components\Chunk.cs" />
     <Compile Include="Components\CompressionResult.cs" />
     <Compile Include="Components\CompressionResultBuilder.cs" />
@@ -48,11 +51,15 @@
     <Compile Include="Components\TaskHandler.cs" />
     <Compile Include="Components\TaskResult.cs" />
     <Compile Include="Components\ZipMode.cs" />
-    <Compile Include="Helpers\ChunkExtensions.cs" />
+    <Compile Include="Helpers\ChunkHelper.cs" />
     <Compile Include="Helpers\Constants.cs" />
     <Compile Include="Helpers\MemberInfoGetting.cs" />
-    <Compile Include="Helpers\StreamExtensions.cs" />
+    <Compile Include="Helpers\ProgressHelper.cs" />
+    <Compile Include="Helpers\SignatureHelper.cs" />
+    <Compile Include="Helpers\ReadChunkHelper.cs" />
     <Compile Include="GzipCompressor.cs" />
+    <Compile Include="Helpers\WriteChunkHelper.cs" />
+    <Compile Include="Interfaces\IGzipProcessorFactory.cs" />
     <Compile Include="Processors\ProcessorQueue.cs" />
     <Compile Include="Processors\ProcessorQueueSplitter.cs" />
     <Compile Include="Interfaces\ICompressor.cs" />
