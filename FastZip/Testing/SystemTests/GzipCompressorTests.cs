@@ -39,8 +39,7 @@ namespace SystemTests
         public void TestBasicFlow()
         {
             Assert.That(_compressor.Compress(_originalFileName, _compressedFileName).HaveError, Is.False);
-            var result = _compressor.Decompress(_compressedFileName, _decompressedFileName);
-            Assert.That(result.HaveError, Is.False);
+            Assert.That(_compressor.Decompress(_compressedFileName, _decompressedFileName).HaveError, Is.False);
         }
 
         [Test]
