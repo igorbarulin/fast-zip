@@ -9,7 +9,7 @@ namespace MultiThreadGzip
 {
     public class GzipCompressor : ICompressor
     {
-        private const int BufferSize = 4;
+        private const int BufferSize = Constants.BufferSize;
 
         public IProgress Progress
         {

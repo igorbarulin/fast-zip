@@ -34,6 +34,8 @@ namespace MultiThreadGzip.Processors
 
             _queues = queues;
         }
+
+        private int _lastProc = 0;
         
         public void Enqueue(object task)
         {
@@ -42,10 +44,12 @@ namespace MultiThreadGzip.Processors
                 throw new NullReferenceException(MemberInfoGetting.GetMemberName(() => task));
             }
             
-            while (!TryEnqueue(task))
+            bool success;
+            do
             {
-                WaitForReady();
-            }
+                success = _queues[_lastProc].TryEnqueue(task);
+                _lastProc = ++_lastProc >= _queues.Length ? 0 : _lastProc;
+            } while (!success);
         }
 
         public void Cancel()
@@ -69,8 +73,6 @@ namespace MultiThreadGzip.Processors
                 {
                     throw new OperationCanceledException("Queue was canceled");
                 }
-                
-                Thread.Sleep(1);
             }
         }
 

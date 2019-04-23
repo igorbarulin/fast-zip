@@ -23,14 +23,15 @@ namespace MultiThreadGzip.Helpers
         
         private static IEnumerable<Chunk> UncompressedChunks(this Stream stream)
         {
-            const int chunkSize = 8192;
+            const int chunkSize = Constants.ChunkSize;
             var buffer = new byte[chunkSize];
             
             var position = 0L;
             var readCount = stream.Read(buffer, 0, chunkSize);
             while (readCount > 0)
             {
-                yield return new Chunk(position, buffer.Take(readCount).ToArray());
+                var data = readCount < chunkSize ? buffer.Take(readCount).ToArray() : buffer;
+                yield return new Chunk(position, data);
 
                 position = stream.Position;
                 readCount = stream.Read(buffer, 0, chunkSize);
